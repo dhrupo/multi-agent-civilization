@@ -5,11 +5,23 @@ import react from "@vitejs/plugin-react"
 // the target base URL and (for user-configured providers) the key per request;
 // with no key header, the server-side .env z.ai key is used as the fallback.
 // Running through the dev server sidesteps CORS for every provider.
-function isBlockedHost(hostname: string): boolean {
-  const h = hostname.toLowerCase()
+function isBlockedHost(rawHost: string): boolean {
+  // URL.hostname wraps IPv6 literals in [brackets] — strip them before checks
+  const h = rawHost.toLowerCase().replace(/^\[|\]$/g, "")
   if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal")) return true
-  if (h === "::1" || h === "::" || h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true
-  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  // IPv4-mapped/-compatible IPv6 with a dotted tail → check the embedded IPv4
+  const embedded = h.match(/^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
+  const host = embedded ? embedded[1] : h
+  if (host.includes(":")) {
+    if (host === "::1" || host === "::") return true // loopback / unspecified
+    if (host.startsWith("::")) return true // IPv4-mapped/-compatible (incl. ::ffff:7f00:1)
+    const seg = host.split(":")[0]
+    if (/^fe[89ab]/.test(seg)) return true // link-local fe80::/10
+    if (/^f[cd]/.test(seg)) return true // unique-local fc00::/7
+    if (/^ff/.test(seg)) return true // multicast ff00::/8
+    return false
+  }
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (m) {
     const [a, b] = [Number(m[1]), Number(m[2])]
     if (a === 127 || a === 10 || a === 0) return true

@@ -10,13 +10,25 @@
 // to blunt SSRF, and redirects are not followed.
 const DEFAULT_BASE = process.env.ZAI_BASE_URL || "https://api.z.ai/api/paas/v4"
 
-function isBlockedHost(hostname) {
-  const h = hostname.toLowerCase()
+function isBlockedHost(rawHost) {
+  // URL.hostname wraps IPv6 literals in [brackets] — strip them before checks
+  const h = rawHost.toLowerCase().replace(/^\[|\]$/g, "")
   if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal")) return true
-  // IPv6 loopback / unspecified / link-local / unique-local
-  if (h === "::1" || h === "::" || h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true
+  // IPv4-mapped/-compatible IPv6 with a dotted tail (::ffff:1.2.3.4) → check the IPv4
+  const embedded = h.match(/^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
+  const host = embedded ? embedded[1] : h
+  if (host.includes(":")) {
+    // IPv6 literal
+    if (host === "::1" || host === "::") return true // loopback / unspecified
+    if (host.startsWith("::")) return true // IPv4-mapped/-compatible (incl. ::ffff:7f00:1 hex form)
+    const seg = host.split(":")[0]
+    if (/^fe[89ab]/.test(seg)) return true // link-local fe80::/10
+    if (/^f[cd]/.test(seg)) return true // unique-local fc00::/7
+    if (/^ff/.test(seg)) return true // multicast ff00::/8
+    return false
+  }
   // IPv4 literal ranges: loopback, private, link-local, unspecified
-  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (m) {
     const [a, b] = [Number(m[1]), Number(m[2])]
     if (a === 127 || a === 10 || a === 0) return true
