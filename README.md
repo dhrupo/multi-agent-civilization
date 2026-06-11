@@ -1,5 +1,7 @@
 # Tiny Civilization 🏝️
 
+### ▶ [**Try the live demo →**](https://multiagentciv.netlify.app/)
+
 A browser-based multi-agent civilization simulator where **AI agents live together on a small island** — gathering, building, trading, stealing, gossiping, holding grudges, making peace, and remembering it all across lives.
 
 Give 2–8 agents distinct personalities, hand them an LLM mind, and watch a society emerge: wars that start for reasons and end from exhaustion, gossip that sparks conflicts, granaries invented to stop thieves, and personalities reshaped by trauma.
