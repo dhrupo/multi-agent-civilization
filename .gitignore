@@ -12,6 +12,7 @@ dist/
 # experiment / verification artifacts
 *.csv
 *.png
+!docs/*.png
 .playwright-mcp/
 
 # logs

@@ -4,6 +4,9 @@ A browser-based multi-agent civilization simulator where **AI agents live togeth
 
 Give 2–8 agents distinct personalities, hand them an LLM mind, and watch a society emerge: wars that start for reasons and end from exhaustion, gossip that sparks conflicts, granaries invented to stop thieves, and personalities reshaped by trauma.
 
+![A 6-agent run paused mid-earthquake: leaderboard with score sparklines, society health charts, and Vex's grudge ledger](docs/screenshot-sim.png)
+*A 6-agent run paused mid-earthquake — leaderboard sparklines, society health charts, and the selected agent's grudge ledger.*
+
 ---
 
 ## Table of contents
@@ -109,6 +112,9 @@ npm run serve          # standalone Node server: static dist/ + AI proxy
 3. **Side panels** — live leaderboard with score sparklines, 📈 Society dashboard (trust, wealth, violence rate, trade rate over time), and the selected agent's full state: needs, inventory, grudges (with reasons), plan, and mind.
 4. **Event log** — filterable feed: ⚔️ Drama, 🤝 Social, 🧠 Minds (inner thoughts and plans).
 5. **End screen** — why the winner won (score breakdown + narrative), final stats table (trades / gifts / peace / thefts / raids / attacks / kills / built), a three-lane story timeline (⚔️ conflict / 🌍 world / 🕊️ diplomacy), top-10 most dramatic events, the relationship matrix, and **"What they'll remember"** — the memories carrying into the next life.
+
+![End screen: final leaderboard, three-lane story timeline, and the most dramatic events of a 600-day run](docs/screenshot-end.png)
+*The end of a 600-day, 6-agent run: a day-114 earthquake leveled every campfire, Maya razed Ana's base, and by day 164 Kai had lost the will to keep fighting Vex.*
 
 ---
 
