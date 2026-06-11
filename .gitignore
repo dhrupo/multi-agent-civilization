@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# secrets — API keys live here, never commit
+.env
+.env.local
+.env.*.local
+
+# experiment / verification artifacts
+*.csv
+*.png
+.playwright-mcp/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# personal AI layer (per-repo overrides, not for the repo)
+.ai/
+CLAUDE.local.md

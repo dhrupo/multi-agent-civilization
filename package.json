@@ -1,0 +1,27 @@
+{
+  "name": "tiny-civilization",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "serve": "node server.mjs",
+    "test:headless": "esbuild scripts/headless.ts --bundle --format=esm --platform=node --define:__AI_KEY_PRESENT__=false --outfile=node_modules/.cache/headless.mjs && node node_modules/.cache/headless.mjs",
+    "experiment": "esbuild scripts/experiment.ts --bundle --format=esm --platform=node --define:__AI_KEY_PRESENT__=false --outfile=node_modules/.cache/experiment.mjs && node node_modules/.cache/experiment.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}
