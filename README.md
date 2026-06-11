@@ -99,6 +99,8 @@ npm run build
 npm run serve          # standalone Node server: static dist/ + AI proxy
 ```
 
+**Deploying to Netlify**: `netlify.toml` and `netlify/functions/ai-chat.mjs` are included — the AI proxy runs as a serverless function at `/api/ai/chat`. Deploy via the connected repo (or `netlify deploy --prod`; drag-and-drop won't include functions), and set `ZAI_API_KEY` in **Site settings → Environment variables** so the default GLM mind works (it's also read at build time to enable the AI badge). Live demo: [multiagentciv.netlify.app](https://multiagentciv.netlify.app/)
+
 ---
 
 ## Playing a run
