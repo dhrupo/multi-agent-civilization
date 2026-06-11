@@ -25,6 +25,35 @@ const DIST = "./dist"
 const FALLBACK_KEY = process.env.ZAI_API_KEY ?? ""
 const FALLBACK_BASE = process.env.ZAI_BASE_URL || "https://api.z.ai/api/paas/v4"
 
+// The server key is bound to the default base URL only — never sent to a
+// client-chosen host. Base URLs are validated (https, no private/loopback
+// targets) to blunt SSRF.
+function isBlockedHost(hostname) {
+  const h = hostname.toLowerCase()
+  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal")) return true
+  if (h === "::1" || h === "::" || h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])]
+    if (a === 127 || a === 10 || a === 0) return true
+    if (a === 169 && b === 254) return true
+    if (a === 192 && b === 168) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+  }
+  return false
+}
+
+function validateBase(raw) {
+  let url
+  try {
+    url = new URL(raw)
+  } catch {
+    return null
+  }
+  if (url.protocol !== "https:" || isBlockedHost(url.hostname)) return null
+  return url
+}
+
 const MIME = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -42,13 +71,30 @@ http
       const chunks = []
       req.on("data", (c) => chunks.push(c))
       req.on("end", async () => {
-        const baseUrl = req.headers["x-ai-base-url"] || FALLBACK_BASE
-        const auth = req.headers["x-ai-key"] || FALLBACK_KEY
+        const clientBase = req.headers["x-ai-base-url"]
+        const clientKey = req.headers["x-ai-key"]
+        // a custom base URL must bring its own key — don't pair it with FALLBACK_KEY
+        if (clientBase && !clientKey) {
+          res.statusCode = 400
+          res.setHeader("Content-Type", "application/json")
+          res.end(JSON.stringify({ error: { message: "A custom base URL requires its own API key." } }))
+          return
+        }
+        const baseUrl = clientBase || FALLBACK_BASE
+        const auth = clientKey || (clientBase ? "" : FALLBACK_KEY)
+        const base = validateBase(baseUrl)
+        if (!base) {
+          res.statusCode = 400
+          res.setHeader("Content-Type", "application/json")
+          res.end(JSON.stringify({ error: { message: "Invalid base URL (must be https and not a private host)." } }))
+          return
+        }
         try {
-          const upstream = await fetch(`${String(baseUrl).replace(/\/$/, "")}/chat/completions`, {
+          const upstream = await fetch(`${base.toString().replace(/\/$/, "")}/chat/completions`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth}` },
             body: Buffer.concat(chunks),
+            redirect: "manual",
           })
           res.statusCode = upstream.status
           const retryAfter = upstream.headers.get("retry-after")

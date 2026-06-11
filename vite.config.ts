@@ -5,6 +5,32 @@ import react from "@vitejs/plugin-react"
 // the target base URL and (for user-configured providers) the key per request;
 // with no key header, the server-side .env z.ai key is used as the fallback.
 // Running through the dev server sidesteps CORS for every provider.
+function isBlockedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase()
+  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal")) return true
+  if (h === "::1" || h === "::" || h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])]
+    if (a === 127 || a === 10 || a === 0) return true
+    if (a === 169 && b === 254) return true
+    if (a === 192 && b === 168) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+  }
+  return false
+}
+
+function validateBase(raw: string): URL | null {
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    return null
+  }
+  if (url.protocol !== "https:" || isBlockedHost(url.hostname)) return null
+  return url
+}
+
 function aiProxy(envKey: string, fallbackBase: string): Plugin {
   return {
     name: "tiny-civ-ai-proxy",
@@ -18,16 +44,30 @@ function aiProxy(envKey: string, fallbackBase: string): Plugin {
         const chunks: Buffer[] = []
         req.on("data", (c) => chunks.push(c))
         req.on("end", async () => {
-          const baseUrl = (req.headers["x-ai-base-url"] as string) || fallbackBase
-          const auth = (req.headers["x-ai-key"] as string) || envKey
+          const clientBase = req.headers["x-ai-base-url"] as string | undefined
+          const clientKey = req.headers["x-ai-key"] as string | undefined
+          // a custom base URL must bring its own key — never paired with envKey
+          if (clientBase && !clientKey) {
+            res.statusCode = 400
+            res.end(JSON.stringify({ error: { message: "A custom base URL requires its own API key." } }))
+            return
+          }
+          const base = validateBase(clientBase || fallbackBase)
+          if (!base) {
+            res.statusCode = 400
+            res.end(JSON.stringify({ error: { message: "Invalid base URL (must be https and not a private host)." } }))
+            return
+          }
+          const auth = clientKey || (clientBase ? "" : envKey)
           try {
-            const upstream = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+            const upstream = await fetch(`${base.toString().replace(/\/$/, "")}/chat/completions`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${auth}`,
               },
               body: Buffer.concat(chunks),
+              redirect: "manual",
             })
             res.statusCode = upstream.status
             const retryAfter = upstream.headers.get("retry-after")
