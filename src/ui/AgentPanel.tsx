@@ -52,6 +52,34 @@ export default function AgentPanel() {
         </div>
       )}
 
+      {(() => {
+        // trait drift: how experience has reshaped this agent from who they began as
+        const labels: Record<string, string> = {
+          aggression: "aggression",
+          greed: "greed",
+          cooperation: "cooperation",
+          curiosity: "curiosity",
+        }
+        const shifts = (Object.keys(labels) as (keyof typeof agent.personality)[])
+          .map((t) => ({ t, delta: agent.personality[t] - agent.basePersonality[t] }))
+          .filter((s) => Math.abs(s.delta) >= 2)
+          .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+        if (shifts.length === 0) return null
+        const coopShift = agent.personality.cooperation - agent.basePersonality.cooperation
+        const mood = coopShift <= -5 ? "Hardened by this life" : coopShift >= 5 ? "Softened by kindness" : "Changed by experience"
+        return (
+          <div className="drift-box" title="How this agent's personality has shifted from who they started as">
+            <span className="drift-mood">⚖ {mood}</span>
+            {shifts.map((s) => (
+              <span key={s.t} className={`drift-trait ${s.delta > 0 ? "up" : "down"}`}>
+                {labels[s.t]} {s.delta > 0 ? "▲" : "▼"}
+                {Math.abs(Math.round(s.delta))}
+              </span>
+            ))}
+          </div>
+        )
+      })()}
+
       {(
         [
           ["❤ Health", agent.health, STAT_COLORS.health],

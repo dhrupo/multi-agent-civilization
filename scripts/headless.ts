@@ -6,6 +6,8 @@ import { placeStartingBase } from "../src/simulation/buildings"
 import { generateWorld, getSpawnPositions } from "../src/simulation/world"
 import { setSeed } from "../src/simulation/rng"
 import { runTick } from "../src/simulation/tick"
+import { chooseBuildingType } from "../src/simulation/buildings"
+import { applyGossip, executeNegotiatedTrade } from "../src/simulation/conversation"
 
 function makeState(agents: Agent[], tiles: ReturnType<typeof generateWorld>, endDay: number): SimState {
   const buildings: SimState["buildings"] = []
@@ -260,6 +262,73 @@ function aggressScenario(withGrievance: boolean): { attacked: boolean; raided: b
       early > 0 && late <= Math.max(2, early * 0.5) ? "PASS (war burned out)" : "FAIL"
     }`
   )
+}
+
+// --- Diplomat viability: sustained trade funds construction ---
+{
+  // A Diplomat (coop 95, greed 30) barely builds on personality alone; once
+  // she has traded enough, commerce should drive her industry up to build.
+  const diplomat = createAgent("a1", "Dip", "#fff", { aggression: 10, greed: 30, cooperation: 95, curiosity: 60 }, { x: 5, y: 5 })
+  const buildBefore = chooseBuildingType(diplomat, []) // base first, regardless
+  diplomat.stats.trades = 40 // simulate a rich trading history
+  diplomat.inventory = { food: 5, wood: 10, stone: 10 }
+  // give it a base already so the next pick reflects discretionary building
+  const tiles = generateWorld()
+  let s = makeState([diplomat], tiles, 9999)
+  let builtNonBase = false
+  for (let i = 0; i < 60 && !builtNonBase; i++) {
+    s = runTick(s)
+    builtNonBase = s.buildings.filter((b) => b.ownerId === "a1" && b.type !== "base").length > 0
+  }
+  console.log(
+    `diplomat viability: traded-merchant built ${s.buildings.filter((b) => b.ownerId === "a1").length} structures ${
+      builtNonBase ? "PASS (commerce funded construction)" : "FAIL"
+    }`
+  )
+  void buildBefore
+}
+
+// --- Gossip: a grudge is partially transmitted to a conversation partner ---
+{
+  const teller = createAgent("a1", "Teller", "#fff", { aggression: 30, greed: 40, cooperation: 50, curiosity: 50 }, { x: 5, y: 5 })
+  const listener = createAgent("a2", "Listener", "#000", { aggression: 30, greed: 40, cooperation: 50, curiosity: 50 }, { x: 6, y: 5 })
+  const villain = createAgent("a3", "Villain", "#0f0", { aggression: 70, greed: 60, cooperation: 20, curiosity: 30 }, { x: 7, y: 5 })
+  teller.grievances = { a3: { score: 80, reasons: ["raided my base"] } }
+  const before = listener.grievances["a3"]?.score ?? 0
+  const warnings = applyGossip([teller, listener, villain], teller, listener)
+  const after = listener.grievances["a3"]?.score ?? 0
+  const warned = warnings.some((w) => w.aboutId === "a3" && w.listenerId === "a2")
+  console.log(
+    `gossip transfer: listener grudge vs villain ${before}→${after}, warned=${warned} ${
+      after > before && warned ? "PASS (rumor spread)" : "FAIL"
+    }`
+  )
+}
+
+// --- Negotiated trade: an in-dialogue deal moves the agreed resources ---
+{
+  const a = createAgent("a1", "A", "#fff", { aggression: 30, greed: 50, cooperation: 60, curiosity: 40 }, { x: 5, y: 5 })
+  const b = createAgent("a2", "B", "#000", { aggression: 30, greed: 50, cooperation: 60, curiosity: 40 }, { x: 6, y: 5 })
+  a.inventory = { food: 0, wood: 5, stone: 0 }
+  b.inventory = { food: 5, wood: 0, stone: 0 }
+  const result = executeNegotiatedTrade(a, b, { aGives: { food: 0, wood: 3, stone: 0 }, bGives: { food: 4, wood: 0, stone: 0 } }, 1)
+  // A gave 3 wood (5→2), got 4 food (+trade bonus); B gave 4 food (5→1, +bonus), got 3 wood
+  const ok =
+    result !== null &&
+    a.inventory.wood === 2 &&
+    a.inventory.food >= 4 &&
+    b.inventory.wood === 3 &&
+    b.inventory.food >= 1 &&
+    a.stats.trades === 1 &&
+    b.stats.trades === 1
+  console.log(
+    `negotiated trade: A=${a.inventory.food}f/${a.inventory.wood}w B=${b.inventory.food}f/${b.inventory.wood}w ${
+      ok ? "PASS (deal executed as agreed)" : "FAIL"
+    }`
+  )
+  // a deal nobody can pay must be rejected
+  const broke = executeNegotiatedTrade(a, b, { aGives: { food: 99, wood: 0, stone: 0 }, bGives: { food: 1, wood: 0, stone: 0 } }, 2)
+  console.log(`negotiated trade guard: unaffordable deal rejected ${broke === null ? "PASS" : "FAIL"}`)
 }
 
 // --- Catastrophe over a long horizon ---

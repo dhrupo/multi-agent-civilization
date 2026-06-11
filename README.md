@@ -68,7 +68,7 @@ None of these behaviors are scripted — they emerge from the rules below plus t
 | 🗣️ **Gossip** | Conversations transfer a fraction of the teller's strongest grievance to the listener, and vouch for close friends. | *"🗣️ Luna warned Rex about Vex"* — and a week later Rex attacks Vex. |
 | 🤝 **Negotiated trade** | Conversation JSON may include a deal (`aGives`/`bGives`); validated and executed exactly as spoken. Trade is positive-sum (both sides gain a bonus). | *"3 stone for 4 food?"* in dialogue becomes a real inventory exchange. |
 | 🏚️ **Granaries** | A storage building locks the owner's last 6 food away from thieves. Being robbed 3× (once for loners) makes anyone want one. | A theft wave triggers an island-wide fortification boom. |
-| 🧬 **Trait drift** | Being attacked: −cooperation, +aggression. Receiving gifts/reparations: +cooperation. Bounded, slow. | A trusting villager ground down by a bully measurably hardens — and remembers it next life. |
+| 🧬 **Trait drift** | Being attacked: −cooperation, +aggression. Receiving gifts/reparations: +cooperation. Bounded, slow. The agent panel shows how far each trait has moved from who they started as (*"⚖ Hardened — cooperation ▼9"*). | A trusting villager ground down by a bully measurably hardens — and remembers it next life. |
 | ❄️ **Seasons** | 120-day year. Winter nearly halves food regrowth and sharpens hunger; minds are warned in prompts. | *"It is AUTUMN: winter is coming — stockpile now"* appears in agents' plans. |
 | 🌋 **Catastrophes** | Storms, blights, earthquakes strike anytime, damage stockpiles and buildings; huddling together protects; violence is dampened. | Rivals sheltering side by side. Or an earthquake leveling four campfires at once. |
 | 🏆 **Transparent scoring** | survival + health + buildings + exploration + social bonds. The end screen explains *why* the winner won. | *"Not a saint: 360 thefts and 1 raid supplemented the ledger."* |
@@ -129,11 +129,11 @@ npm run serve          # standalone Node server: static dist/ + AI proxy
 | `npm run dev` | Dev server with AI proxy at `localhost:5199` |
 | `npm run build` | Production build to `dist/` |
 | `npm run serve` | Standalone Node server (static + AI proxy), for deployment |
-| `npm run test:headless` | **10-gate regression suite**: stockpile caps, trespass grievance caps, the justification gate (no cause → no violence), justified violence, reconciliation, positive-sum trade, storage protection, war burnout, trait drift, catastrophe frequency |
+| `npm run test:headless` | **14-gate regression suite**: stockpile caps, trespass grievance caps, the justification gate (no cause → no violence), justified violence, reconciliation, positive-sum trade, storage protection, war burnout, trait drift, diplomat viability, gossip transfer, negotiated trade (+ guard), catastrophe frequency |
 | `npm run experiment -- --runs 30 --days 1000 --seed 1` | Seeded, reproducible instinct-mode batch; CSV per run to stdout, win/score summary to stderr |
 | `npm run experiment -- --runs 5 --days 500 --ai --memory` | AI-minded batch in Node (direct provider calls); `--memory` carries memories across the batch's runs — for testing how history changes outcomes statistically |
 
-The experiment runner is how balance changes get validated here: every mechanic landed with before/after win-rate tables across 30–60 seeded runs (e.g., the Hermit rebalance moved Luna from 0/30 wins at mean 111 to 9–11/30 at mean ~185 without breaking the other archetypes).
+The experiment runner is how balance changes get validated here: every mechanic landed with before/after win-rate tables across 30–60 seeded runs (e.g., the Hermit rebalance moved Luna from 0/30 wins at mean 111 to 9–11/30 at mean ~185 without breaking the other archetypes). The same approach made every archetype viable: **industry** (the drive to gather and build) runs on `max(greed, self-reliance, proven commerce)` — so the greedy build, loners homestead behind granaries (Hermit), and merchants who have traded enough reinvest their wealth in construction (Diplomat). No personality is a dead end.
 
 ---
 
@@ -146,6 +146,7 @@ src/
     agent.ts         #   agent factory, personality presets
     actions.ts       #   utility scoring + action execution (the "instinct" brain)
     relationships.ts #   relationships, grievances, decay
+    conversation.ts  #   gossip transfer + negotiated-trade execution (pure, tested)
     buildings.ts     #   bases, granaries, build priorities
     tick.ts          #   the day loop: needs, catastrophes, seasons, metrics
     seasons.ts       #   120-day year, regen/hunger multipliers
@@ -160,7 +161,7 @@ src/
   ui/                # SetupScreen, SimScreen, MapCanvas (beams, webs), Leaderboard,
                      # SocietyPanel, AgentPanel, EventLog, EndScreen
 scripts/
-  headless.ts        # the 10-gate regression suite
+  headless.ts        # the 14-gate regression suite
   experiment.ts      # seeded batch runner (instinct or --ai)
 server.mjs           # production server: static dist/ + AI proxy
 ```

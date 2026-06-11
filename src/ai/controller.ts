@@ -21,10 +21,8 @@ import { mindById } from "./settings"
 
 export type ConversationLine = { speakerId: string; text: string }
 
-export type NegotiatedTrade = {
-  aGives: { food: number; wood: number; stone: number }
-  bGives: { food: number; wood: number; stone: number }
-}
+import type { NegotiatedTrade } from "../simulation/conversation"
+export type { NegotiatedTrade }
 
 // The store implements this bridge; every apply re-checks runId so responses
 // that arrive after a restart or game end are discarded.

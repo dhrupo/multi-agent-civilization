@@ -706,6 +706,35 @@ h3,
   line-height: 1.4;
 }
 
+.drift-box {
+  margin: 0 12px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.drift-mood {
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+.drift-trait {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--panel-mid);
+  font-variant-numeric: tabular-nums;
+}
+
+.drift-trait.up {
+  color: #f4a261;
+}
+
+.drift-trait.down {
+  color: #6fb1d6;
+}
+
 /* ---------- Map overlays ---------- */
 
 .paused-overlay {

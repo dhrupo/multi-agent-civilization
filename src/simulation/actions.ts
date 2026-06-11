@@ -248,10 +248,12 @@ export function computeUtilities(agent: Agent, ctx: WorldContext): Record<Action
   // a declared war plan hardens resolve, but never bypasses justification
   const effAggression = agent.aiPlan?.strategy === "aggress" ? Math.max(aggression, 70) : aggression
   const violenceDamp = ctx.catastropheActive ? CATASTROPHE_VIOLENCE_DAMPING : 1
-  // industry runs on greed OR self-reliance: a loner who can't lean on trade
-  // must homestead — this is what makes the Hermit archetype viable
+  // Industry runs on greed OR self-reliance OR proven commerce. A loner who
+  // can't lean on trade homesteads (Hermit); a merchant whose trades have made
+  // them rich reinvests in buildings (Diplomat) — so all archetypes can build.
   const independence = (100 - cooperation) * 0.7
-  const industry = Math.max(greed, independence)
+  const commerce = Math.min(60, agent.stats.trades * 1.5) // each completed trade earns build ambition
+  const industry = Math.max(greed, independence, commerce)
 
   const utilities: Record<ActionType, number> = {
     eat: hunger > 20 && inventory.food > 0 ? hunger * 3 : 0,

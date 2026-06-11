@@ -5,18 +5,10 @@ import { createAgent } from "../simulation/agent"
 import { generateWorld, getSpawnPositions } from "../simulation/world"
 import { placeStartingBase } from "../simulation/buildings"
 import { runTick } from "../simulation/tick"
-import { addGrievance, updateRelationship } from "../simulation/relationships"
-import { aiTick, type AiBridge, type ConversationLine, type NegotiatedTrade } from "../ai/controller"
+import { updateRelationship } from "../simulation/relationships"
+import { applyGossip, executeNegotiatedTrade, type NegotiatedTrade } from "../simulation/conversation"
+import { aiTick, type AiBridge, type ConversationLine } from "../ai/controller"
 import { saveRunMemory } from "../ai/memory"
-import {
-  GOSSIP_GRIEVANCE_MIN,
-  GOSSIP_REL_PENALTY,
-  GOSSIP_TRANSFER,
-  GOSSIP_TRANSFER_CAP,
-  GOSSIP_VOUCH_GAIN,
-  GOSSIP_VOUCH_MIN,
-  TRADE_BONUS,
-} from "../constants"
 
 const DEFAULT_SPEED = 1
 
@@ -259,75 +251,27 @@ const aiBridge: AiBridge = {
         events.push(aiEvent(s.state.day, `${a.name} and ${b.name} are now best friends`, 3, [aId, bId]))
       }
 
-      // gossip: the teller's strongest grudge (and warmest friendship) rubs off
-      for (const [teller, listener] of [
-        [a, b],
-        [b, a],
-      ] as const) {
-        const worst = agents
-          .filter((x) => x.id !== teller.id && x.id !== listener.id && x.isAlive)
-          .map((x) => ({ x, g: teller.grievances[x.id]?.score ?? 0 }))
-          .sort((p, q) => q.g - p.g)[0]
-        if (worst && worst.g >= GOSSIP_GRIEVANCE_MIN) {
-          const transfer = Math.min(GOSSIP_TRANSFER_CAP, Math.round(worst.g * GOSSIP_TRANSFER))
-          const reason = teller.grievances[worst.x.id]?.reasons.slice(-1)[0] ?? "wronged them"
-          addGrievance(listener, worst.x.id, transfer, `heard from ${teller.name}: ${reason}`)
-          updateRelationship(listener, worst.x.id, -GOSSIP_REL_PENALTY)
-          if (transfer >= 10) {
-            events.push(
-              aiEvent(s.state.day, `🗣️ ${teller.name} warned ${listener.name} about ${worst.x.name}`, 2, [
-                teller.id,
-                listener.id,
-                worst.x.id,
-              ])
-            )
-          }
-        }
-        const friend = agents
-          .filter((x) => x.id !== teller.id && x.id !== listener.id && x.isAlive)
-          .map((x) => ({ x, r: teller.relationships[x.id] ?? 0 }))
-          .sort((p, q) => q.r - p.r)[0]
-        if (friend && friend.r >= GOSSIP_VOUCH_MIN) {
-          updateRelationship(listener, friend.x.id, GOSSIP_VOUCH_GAIN)
-        }
+      // gossip: grudges rub off and friendships get vouched for (mutates agents)
+      const living = agents.filter((x) => x.isAlive)
+      for (const w of applyGossip(living, a, b)) {
+        events.push(
+          aiEvent(s.state.day, `🗣️ ${w.tellerName} warned ${w.listenerName} about ${w.aboutName}`, 2, [
+            w.tellerId,
+            w.listenerId,
+            w.aboutId,
+          ])
+        )
       }
 
       // a deal struck in conversation executes immediately (if both can pay)
       if (trade) {
-        const canA =
-          a.inventory.food >= trade.aGives.food &&
-          a.inventory.wood >= trade.aGives.wood &&
-          a.inventory.stone >= trade.aGives.stone
-        const canB =
-          b.inventory.food >= trade.bGives.food &&
-          b.inventory.wood >= trade.bGives.wood &&
-          b.inventory.stone >= trade.bGives.stone
-        const aTotal = trade.aGives.food + trade.aGives.wood + trade.aGives.stone
-        const bTotal = trade.bGives.food + trade.bGives.wood + trade.bGives.stone
-        if (canA && canB && aTotal > 0 && bTotal > 0) {
-          for (const res of ["food", "wood", "stone"] as const) {
-            a.inventory[res] += trade.bGives[res] - trade.aGives[res]
-            b.inventory[res] += trade.aGives[res] - trade.bGives[res]
-          }
-          // gains from trade apply to negotiated deals too
-          a.inventory.food += TRADE_BONUS
-          b.inventory.food += TRADE_BONUS
-          a.stats.trades++
-          b.stats.trades++
-          a.lastTrades[bId] = s.state.day
-          b.lastTrades[aId] = s.state.day
-          const fmt = (g: NegotiatedTrade["aGives"]) =>
-            (["food", "wood", "stone"] as const)
-              .filter((r) => g[r] > 0)
-              .map((r) => `${g[r]} ${r}`)
-              .join("+") || "nothing"
+        const done = executeNegotiatedTrade(a, b, trade, s.state.day)
+        if (done) {
           events.push(
-            aiEvent(
-              s.state.day,
-              `🤝 Deal: ${a.name} gave ${fmt(trade.aGives)} for ${b.name}'s ${fmt(trade.bGives)}`,
-              2,
-              [aId, bId]
-            )
+            aiEvent(s.state.day, `🤝 Deal: ${a.name} gave ${done.aGave} for ${b.name}'s ${done.bGave}`, 2, [
+              aId,
+              bId,
+            ])
           )
         }
       }
