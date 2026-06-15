@@ -1,5 +1,9 @@
 # Tiny Civilization 🏝️
 
+[![Live demo](https://img.shields.io/badge/live-demo-2ea44f)](https://multiagentciv.netlify.app/)
+[![CI](https://github.com/dhrupo/multi-agent-civilization/actions/workflows/ci.yml/badge.svg)](https://github.com/dhrupo/multi-agent-civilization/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
+
 ### ▶ [**Try the live demo →**](https://multiagentciv.netlify.app/)
 
 A browser-based multi-agent civilization simulator where **AI agents live together on a small island** — gathering, building, trading, stealing, gossiping, holding grudges, making peace, and remembering it all across lives.
@@ -214,6 +218,12 @@ The recurring lesson: every time one form of conflict gets patched, the agents f
 - **Calls look stuck?** Hover the 🧠 badge: `sent / ok / failed / throttled` tells you exactly what's happening.
 - **Want determinism?** Use the experiment runner with `--seed` — the browser run is intentionally non-deterministic (live LLM).
 - **Forget the past**: the setup screen has a "forget past lives" control (and the Chronicle to review them first).
+
+---
+
+## License
+
+[GPL-3.0](LICENSE) — free to use, study, modify, and share; derivative works must stay open under the same license.
 
 ---
 
